@@ -154,10 +154,14 @@ contents of your header file. This lets you group all of the necessary changes i
 Oh yeah, I chose to setup the default RX protocol to: `RX_SPI_NRF24_V202_1M` as this
 works perfectly. Some of the other nrf rx modules seem to have pitch, yaw and roll inverted.
 
-Whoops....another thing. On OMNIBUSF4 I seem to be seeing some dropouts. Not sure why.
-Everything runs great on my NOX board. It could be due to the OMNIBUSF4 (F405) running much faster
-than the NOX (F411) (168Mhz vs the NOX's 96Mhz). If that is the case, then the SCK pulse
-may need to be extended slightly with a short delay before toggling the pin.
+Whoops....another thing. On OMNIBUSF4 I encountered some dropouts. I suspected that the
+software SPI serial clock pulse might be too short due to the faster processor used
+by that flight controller (an STM32F405). My NOX board (which uses an STM32F411) ran
+perfectly fine however.
+
+I added a slight delay to stretch out the clock pulse (look for `USE_SOFTSPI_DELAY` in source file `rx_softspi.c`. 
+This fixed the issue on my OMNIBUSF4 board. I think it is worth noting here in this document
+in case this needs to be revisited.
 
 ```c
 //------------------------------------------------------------------------------
