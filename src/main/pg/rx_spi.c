@@ -39,6 +39,10 @@ void pgResetFn_rxSpiConfig(rxSpiConfig_t *rxSpiConfig)
 
     // Basic SPI
     rxSpiConfig->csnTag = IO_TAG(RX_NSS_PIN);
+#ifdef USE_RX_SOFTSPI
+    rxSpiConfig->spibus = 0;
+#else
     rxSpiConfig->spibus = SPI_DEV_TO_CFG(spiDeviceByInstance(RX_SPI_INSTANCE));
+#endif
 }
 #endif

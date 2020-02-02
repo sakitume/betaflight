@@ -27,49 +27,79 @@
 
 #include "platform.h"
 
-#if defined(USE_RX_SPI) && !defined(USE_RX_SOFTSPI)
+#if defined(USE_RX_SPI) && defined(USE_RX_SOFTSPI)
 
 #include "build/build_config.h"
 
-#include "drivers/bus_spi.h"
 #include "drivers/io.h"
 #include "drivers/io_impl.h"
-#include "drivers/rcc.h"
 #include "drivers/system.h"
 
 #include "pg/rx_spi.h"
 
 #include "rx_spi.h"
 
-static busDevice_t rxSpiDevice;
-static busDevice_t *busdev = &rxSpiDevice;
+#define DISABLE_RX()    {IOHi(DEFIO_IO(RX_NSS_PIN));}
+#define ENABLE_RX()     {IOLo(DEFIO_IO(RX_NSS_PIN));}
 
-#define DISABLE_RX()    {IOHi(busdev->busdev_u.spi.csnPin);}
-#define ENABLE_RX()     {IOLo(busdev->busdev_u.spi.csnPin);}
+#if defined(STM32F4) || defined(STM32F3)
+    #define SOFT_SPI_IO_INPUT_CFG   IO_CONFIG(GPIO_Mode_IN, GPIO_Speed_50MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL)
+    #define SOFT_SPI_IO_OUTPUT_CFG  IO_CONFIG(GPIO_Mode_OUT, GPIO_Speed_50MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL)
+#elif defined(STM32F7)
+    #define SOFT_SPI_IO_INPUT_CFG   IO_CONFIG(GPIO_MODE_INPUT, GPIO_SPEED_FREQ_HIGH, GPIO_NOPULL)
+    #define SOFT_SPI_IO_OUTPUT_CFG  IO_CONFIG(GPIO_MODE_OUTPUT_PP, GPIO_SPEED_FREQ_HIGH, GPIO_NOPULL)
+#elif defined(STM32F1)
+    #define SOFT_SPI_IO_INPUT_CFG   IO_CONFIG(GPIO_Mode_IN_FLOATING, GPIO_Speed_50MHz)
+    #define SOFT_SPI_IO_OUTPUT_CFG  IO_CONFIG(GPIO_Mode_Out_PP,      GPIO_Speed_50MHz)
+#endif
+
 
 bool rxSpiDeviceInit(const rxSpiConfig_t *rxSpiConfig)
 {
-    if (!rxSpiConfig->spibus) {
-        return false;
-    }
+    UNUSED(rxSpiConfig);
 
-    spiBusSetInstance(busdev, spiInstanceByDevice(SPI_CFG_TO_DEV(rxSpiConfig->spibus)));
+    IOInit(DEFIO_IO(RX_NSS_PIN), OWNER_RX_SPI, 0);
+    IOConfigGPIO(DEFIO_IO(RX_NSS_PIN), SOFT_SPI_IO_OUTPUT_CFG);
 
-    const IO_t rxCsPin = IOGetByTag(rxSpiConfig->csnTag);
-    IOInit(rxCsPin, OWNER_RX_SPI_CS, 0);
-    IOConfigGPIO(rxCsPin, SPI_IO_CS_CFG);
-    busdev->busdev_u.spi.csnPin = rxCsPin;
+    IOInit(DEFIO_IO(RX_SCK_PIN), OWNER_RX_SPI, 0);
+    IOConfigGPIO(DEFIO_IO(RX_SCK_PIN), SOFT_SPI_IO_OUTPUT_CFG);
+    
+    IOInit(DEFIO_IO(RX_MISO_PIN), OWNER_RX_SPI, 0);
+    IOConfigGPIO(DEFIO_IO(RX_MISO_PIN), SOFT_SPI_IO_INPUT_CFG);
+    
+    IOInit(DEFIO_IO(RX_MOSI_PIN), OWNER_RX_SPI, 0);
+    IOConfigGPIO(DEFIO_IO(RX_MOSI_PIN), SOFT_SPI_IO_OUTPUT_CFG);
 
     DISABLE_RX();
-
-    spiSetDivisor(busdev->busdev_u.spi.instance, SPI_CLOCK_STANDARD);
-
     return true;
 }
 
 uint8_t rxSpiTransferByte(uint8_t data)
 {
-    return spiTransferByte(busdev->busdev_u.spi.instance, data);
+    for(int i = 0; i < 8; i++) {
+
+        if(data & 0x80)
+        {
+            IOHi(DEFIO_IO(RX_MOSI_PIN));
+        }
+        else
+        {
+            IOLo(DEFIO_IO(RX_MOSI_PIN));
+        }
+
+        IOHi(DEFIO_IO(RX_SCK_PIN));
+        data <<= 1;
+
+
+        if(IORead(DEFIO_IO(RX_MISO_PIN)))
+        {
+            data |= 1;
+        }
+
+        IOLo(DEFIO_IO(RX_SCK_PIN));
+    }
+
+    return data;
 }
 
 uint8_t rxSpiWriteByte(uint8_t data)
