@@ -127,3 +127,116 @@
 
 #define USABLE_TIMER_CHANNEL_COUNT 8
 #define USED_TIMERS ( TIM_N(1) | TIM_N(2) | TIM_N(3) | TIM_N(4) | TIM_N(5) | TIM_N(9) )
+
+
+//------------------------------------------------------------------------------
+// Resource changes needed by this particular target for software spi nrf24 rx
+//------------------------------------------------------------------------------
+
+#ifdef SERIALRX_UART
+#undef SERIALRX_UART
+#endif
+
+#ifdef DEFAULT_RX_FEATURE
+#undef DEFAULT_RX_FEATURE
+#endif
+
+#ifdef SERIALRX_PROVIDER
+#undef SERIALRX_PROVIDER
+#endif
+
+// Nordic Semiconductor uses 'CSN', STM uses 'NSS'
+// Here is where you specify your software SPI pins
+// The "RX_NSS_PIN" is for the CS/CSN/SS (chip select, chip select not, slave select) pin
+#define RX_NSS_PIN              PB7
+#define RX_SCK_PIN              PA0
+#define RX_MISO_PIN             PB10
+#define RX_MOSI_PIN             PB6
+
+// I am not using the CE pin on the NRF24L01. Instead I am tying it to VCC. This works fine
+// and just means the module will always be in either RX or TX mode (versus being off).
+// If you wish to use the CE pin (like the original rx_nrf24l01.c source code expects)
+// then you just need to define the following with the pin you wish to use (replace the P??)
+//#define RX_CE_PIN		P??
+
+
+//--------------------------------------------------------------------------------------------------
+// Changes/Additions needed for software spi nr42l01 RX support
+//--------------------------------------------------------------------------------------------------
+// Define USE_RX_SPI so src/main/rx_spi.c is compiled
+#define USE_RX_SPI
+
+// Define USE_RX_SOFTSPI so that bus_spi.c doesn't try to: IO_TAG(RX_NSS_PIN)
+// and that src/main/drivers/rx/rx_spi.c is *NOT* compiled, and instead my
+// new src/main/drivers/rx/rx_softspi.c is compiled instead
+// Note: I had to edit src/main/drivers/rx/rx_spi.c so it would test for this
+#define USE_RX_SOFTSPI
+
+// Define USE_RX_NRF24 so that nrf24l01.c is compiled
+#define USE_RX_NRF24
+
+// I'm using software SPI so don't define RX_SPI_INSTANCE
+//#define RX_SPI_INSTANCE         SPI1
+#ifdef RX_SPI_INSTANCE
+#undef RX_SPI_INSTANCE
+#endif
+
+// These are the available nrf24l01 spi rx modules I want to try out
+#define USE_RX_CX10
+#define USE_RX_H8_3D
+//#define USE_RX_INAV I didn't see how to enable this with multiprotocol module so am leaving this out
+//#define USE_RX_KN This is getting a compile error, looks fixable but too much trouble right now
+#define USE_RX_SYMA
+#define USE_RX_V202
+
+// Set a default rx protocol module
+#define RX_SPI_DEFAULT_PROTOCOL RX_SPI_NRF24_V202_1M
+//#define RX_SPI_DEFAULT_PROTOCOL RX_SPI_NRF24_INAV
+//#define RX_SPI_DEFAULT_PROTOCOL RX_SPI_NRF24_H8_3D
+//#define RX_SPI_DEFAULT_PROTOCOL RX_SPI_NRF24_CX10A
+//#define RX_SPI_DEFAULT_PROTOCOL RX_SPI_NRF24_V202_1M
+
+#ifdef DEFAULT_RX_FEATURE
+#undef DEFAULT_RX_FEATURE
+#endif
+#define DEFAULT_RX_FEATURE      FEATURE_RX_SPI
+//#define USE_TELEMETRY
+//#define USE_TELEMETRY_LTM
+//#define USE_TELEMETRY_NRF24_LTM
+
+// We're using USE_RX_SPI instead
+#ifdef USE_PWM
+#undef USE_PWM
+#endif
+
+// We're using USE_RX_SPI instead
+#ifdef USE_PPM
+#undef USE_PPM
+#endif
+
+// We're using USE_RX_SPI instead
+#ifdef USE_SERIAL_RX
+#undef USE_SERIAL_RX
+#endif
+
+#undef USE_SERIAL_RX
+#undef USE_SERIALRX_CRSF       // Team Black Sheep Crossfire protocol
+#undef USE_SERIALRX_IBUS       // FlySky and Turnigy receivers
+#undef USE_SERIALRX_SBUS       // Frsky and Futaba receivers
+#undef USE_SERIALRX_SPEKTRUM   // SRXL, DSM2 and DSMX protocol
+#undef USE_SERIALRX_SUMD       // Graupner Hott protocol
+#undef USE_SERIALRX_SUMH       // Graupner legacy protocol
+#undef USE_SERIALRX_XBUS       // JR
+
+//--------------------------------------------------------------------------------------------------
+// Changes/Additions you must make to the corresponding target.mk for software spi nr42l01 RX support
+// Note: Make sure tab characters (for whitespace) are used when editing the target.mk
+//--------------------------------------------------------------------------------------------------
+#if 0
+			drivers/rx/rx_nrf24l01.c \
+			drivers/rx/rx_softspi.c \
+			rx/nrf24_cx10.c \
+			rx/nrf24_h8_3d.c \
+			rx/nrf24_syma.c \
+			rx/nrf24_v202.c
+#endif
