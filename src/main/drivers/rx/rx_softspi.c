@@ -53,6 +53,17 @@
     #define SOFT_SPI_IO_OUTPUT_CFG  IO_CONFIG(GPIO_Mode_Out_PP,      GPIO_Speed_50MHz)
 #endif
 
+// Faster processors may need to stretch out the SCK pulse. I've noticed this with OMNIBUSF4 which uses
+// an STM32F405 that runs at 168Mhz.
+#if defined(STM32F405xx)
+#define USE_SOFTSPI_DELAY
+#endif
+
+#if defined(USE_SOFTSPI_DELAY)
+#define SPI_DELAY()     { __asm__ __volatile__("nop"); __asm__ __volatile__("nop"); __asm__ __volatile__("nop"); }
+#else
+#define SPI_DELAY()     {}
+#endif
 
 bool rxSpiDeviceInit(const rxSpiConfig_t *rxSpiConfig)
 {
@@ -87,6 +98,7 @@ uint8_t rxSpiTransferByte(uint8_t data)
             IOLo(DEFIO_IO(RX_MOSI_PIN));
         }
 
+        SPI_DELAY();
         IOHi(DEFIO_IO(RX_SCK_PIN));
         data <<= 1;
 
@@ -96,6 +108,7 @@ uint8_t rxSpiTransferByte(uint8_t data)
             data |= 1;
         }
 
+        SPI_DELAY();
         IOLo(DEFIO_IO(RX_SCK_PIN));
     }
 
