@@ -27,7 +27,7 @@
 
 #include "platform.h"
 
-#ifdef USE_RX_SPI
+#if defined(USE_RX_SPI) && !defined(USE_RX_SOFTSPI)
 
 #include "build/build_config.h"
 

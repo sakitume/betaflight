@@ -41,8 +41,13 @@
 
 #include "rx_nrf24l01.h"
 
+#if defined(USE_RX_SOFTSPI) && !defined(RX_CE_PIN)
+#define NRF24_CE_HI()   {}
+#define NRF24_CE_LO()   {}
+#else
 #define NRF24_CE_HI()   {IOHi(DEFIO_IO(RX_CE_PIN));}
 #define NRF24_CE_LO()   {IOLo(DEFIO_IO(RX_CE_PIN));}
+#endif
 
 // Instruction Mnemonics
 // nRF24L01:  Table 16. Command set for the nRF24L01 SPI. Product Specification, p46
@@ -62,11 +67,16 @@
 
 static void NRF24L01_InitGpio(void)
 {
+#if defined(USE_RX_SOFTSPI) && !defined(RX_CE_PIN)
+    // No GPIO initialization is needed. It is expected that the CE pin of your NRF24L01 module
+    // is hardwired to VCC. For my use case this works well
+#else
     // CE as OUTPUT
     const SPIDevice rxSPIDevice = spiDeviceByInstance(RX_SPI_INSTANCE);
     IOInit(DEFIO_IO(RX_CE_PIN), OWNER_RX_SPI_CS, rxSPIDevice + 1);
     IOConfigGPIO(DEFIO_IO(RX_CE_PIN), SPI_IO_CS_CFG);
     NRF24_CE_LO();
+#endif    
 }
 
 void NRF24L01_WriteReg(uint8_t reg, uint8_t data)
@@ -237,14 +247,14 @@ bool NRF24L01_ReadPayloadIfAvailableFast(uint8_t *data, uint8_t length)
     // at 50MHz clock rate that is approximately 3 microseconds
     bool ret = false;
     ENABLE_RX();
-    rxSpiTransferByte(R_REGISTER | (REGISTER_MASK & NRF24L01_07_STATUS));
+    rxSpiWriteByte(R_REGISTER | (REGISTER_MASK & NRF24L01_07_STATUS));
     const uint8_t status = rxSpiTransferByte(NOP);
     if ((status & BV(NRF24L01_07_STATUS_RX_DR)) == 0) {
         ret = true;
         // clear RX_DR flag
-        rxSpiTransferByte(W_REGISTER | (REGISTER_MASK & NRF24L01_07_STATUS));
-        rxSpiTransferByte(BV(NRF24L01_07_STATUS_RX_DR));
-        rxSpiTransferByte(R_RX_PAYLOAD);
+        rxSpiWriteByte(W_REGISTER | (REGISTER_MASK & NRF24L01_07_STATUS));
+        rxSpiWriteByte(BV(NRF24L01_07_STATUS_RX_DR));
+        rxSpiWriteByte(R_RX_PAYLOAD);
         for (uint8_t i = 0; i < length; i++) {
             data[i] = rxSpiTransferByte(NOP);
         }
