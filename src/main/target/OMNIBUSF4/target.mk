@@ -12,5 +12,11 @@ TARGET_SRC = \
             drivers/compass/compass_lis3mdl.c \
             drivers/max7456.c \
             drivers/rx/rx_cyrf6936.c \
-            rx/cyrf6936_spektrum.c
+            rx/cyrf6936_spektrum.c \
+			drivers/rx/rx_nrf24l01.c \
+			drivers/rx/rx_softspi.c \
+			rx/nrf24_cx10.c \
+			rx/nrf24_h8_3d.c \
+			rx/nrf24_syma.c \
+			rx/nrf24_v202.c
 			
