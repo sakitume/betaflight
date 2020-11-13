@@ -148,7 +148,10 @@
 // The "RX_NSS_PIN" is for the CS/CSN/SS (chip select, chip select not, slave select) pin
 #undef RX_SPI_EXTI_PIN	// not using this pin
 #undef RX_NSS_PIN
-#define RX_NSS_PIN              PB7
+
+//#define RX_NSS_PIN              PB7		// PB7 is the "RX1" pad on a Play F4 FC board
+#define RX_NSS_PIN              PA2		// PA2 is the "TX2" pad on a Play F4 FC board
+
 #define RX_SCK_PIN              PA0
 #define RX_MISO_PIN             PB10
 #define RX_MOSI_PIN             PB6
